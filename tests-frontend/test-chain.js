@@ -29,9 +29,14 @@ console.log("== 1. Config ==");
 check("CHAIN_ID is 56", CONFIG.CHAIN_ID === 56);
 check("registry address is checksummed",
   ethers.getAddress(CONFIG.AGENT_ID_REGISTRY) === CONFIG.AGENT_ID_REGISTRY);
-check("AgentStreak address is zero placeholder (not deployed)",
-  CONFIG.AGENT_STREAK_ADDRESS === "0x0000000000000000000000000000000000000000");
-check("CONTRACTS_DEPLOYED is false", CONTRACTS_DEPLOYED === false);
+check("AgentStreak address is the deployed contract",
+  CONFIG.AGENT_STREAK_ADDRESS.toLowerCase() === "0xf67d706d60092045d9f5ec1da83d7f2fcceec474",
+  CONFIG.AGENT_STREAK_ADDRESS);
+check("AgentStreak address is checksummed",
+  ethers.getAddress(CONFIG.AGENT_STREAK_ADDRESS) === CONFIG.AGENT_STREAK_ADDRESS);
+check("CONTRACTS_DEPLOYED is true", CONTRACTS_DEPLOYED === true);
+check("DEPLOY_BLOCK is 134808165", CONFIG.DEPLOY_BLOCK === 134808165,
+  `got ${CONFIG.DEPLOY_BLOCK}`);
 check("RPC list non-empty", CONFIG.READ_RPCS.length >= 8, `${CONFIG.READ_RPCS.length} RPCs`);
 check("tier thresholds 3/7/14/30",
   CONFIG.TIERS.map((t) => t.days).join(",") === "3,7,14,30");
@@ -128,6 +133,48 @@ async function probeRpc(url, timeoutMs) {
   // Non-holder returns 0 — the page relies on this for the gate.
   const bal2 = await registry.balanceOf("0x0000000000000000000000000000000000000001");
   check("balanceOf(random addr) == 0", Number(bal2) === 0);
+
+  console.log("== 6. Live AgentStreak reads (BSC mainnet) ==");
+  const streak = new ethers.Contract(CONFIG.AGENT_STREAK_ADDRESS, AGENT_STREAK_ABI, provider);
+  const [users, total, owner, paused, badgeAddr, agentIdAddr] = await Promise.all([
+    streak.userCount(),
+    streak.totalCheckInCount(),
+    streak.owner(),
+    streak.paused(),
+    streak.badge(),
+    streak.agentId(),
+  ]);
+  check("userCount() == 1", Number(users) === 1, `got ${users}`);
+  check("totalCheckInCount() == 1", Number(total) === 1, `got ${total}`);
+  check("owner() == khatell.ai", owner.toLowerCase() === KHATELL.toLowerCase(), `got ${owner}`);
+  check("paused() == false", paused === false);
+  check("badge() == deployed StreakBadge",
+    badgeAddr.toLowerCase() === "0xc428ec5de2350937754d585cea88807dd76fdff7", `got ${badgeAddr}`);
+  check("agentId() == registry",
+    agentIdAddr.toLowerCase() === CONFIG.AGENT_ID_REGISTRY.toLowerCase(), `got ${agentIdAddr}`);
+  const u = await streak.getUser(KHATELL);
+  check("getUser(khatell).streak == 1", Number(u.streak) === 1, `got ${u.streak}`);
+  check("getUser(khatell).best == 1", Number(u.best) === 1, `got ${u.best}`);
+  check("getUser(khatell).total == 1", Number(u.total) === 1, `got ${u.total}`);
+  const today = await streak.hasCheckedInToday(KHATELL);
+  check("hasCheckedInToday(khatell) == true", today === true);
+  const page = await streak.getUsers(0, 100);
+  check("getUsers(0,100) lists khatell.ai first",
+    page.users.length === 1 && page.users[0].toLowerCase() === KHATELL.toLowerCase(),
+    `got ${page.users.length} user(s)`);
+  // StreakBadge reads via the on-chain badge() address (same as the page does).
+  const badge = new ethers.Contract(badgeAddr, STREAK_BADGE_ABI, provider);
+  const [bName, bSymbol, bNextId, bBal, bStreak] = await Promise.all([
+    badge.name(), badge.symbol(), badge.nextTokenId(),
+    badge.balanceOf(KHATELL), badge.streak(),
+  ]);
+  check('badge.name() == "Agent Streak Badge"', bName === "Agent Streak Badge", `got "${bName}"`);
+  check('badge.symbol() == "STREAK"', bSymbol === "STREAK", `got "${bSymbol}"`);
+  check("badge.nextTokenId() == 0 (no badge yet — streak 1 < Bronze 3)",
+    Number(bNextId) === 0, `got ${bNextId}`);
+  check("badge.balanceOf(khatell) == 0", Number(bBal) === 0, `got ${bBal}`);
+  check("badge.streak() == AgentStreak",
+    bStreak.toLowerCase() === CONFIG.AGENT_STREAK_ADDRESS.toLowerCase(), `got ${bStreak}`);
 
   console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);

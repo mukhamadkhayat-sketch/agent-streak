@@ -19,7 +19,7 @@ const CONFIG = {
   AGENT_ID_REGISTRY: "0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F",
 
   // AgentStreak on BNB Chain mainnet (deployed 21 Nov 2026, block 134808165).
-  AGENT_STREAK_ADDRESS: "0xf67d706d60092045d9f5ec1da83d7f2fcceec474",
+  AGENT_STREAK_ADDRESS: "0xf67D706d60092045D9f5EC1Da83d7F2Fcceec474",
 
   // Block number of the deploy transaction (for event queries).
   DEPLOY_BLOCK: 134808165,
