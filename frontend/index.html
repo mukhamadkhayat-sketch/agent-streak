@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Agent Streak — Daily Check-in for Agent ID Holders</title>
+  <meta name="description" content="Agent Streak is a proof-of-consistency dApp for Agent ID holders: check in once per UTC day, build an on-chain streak, earn soulbound badges. Free — gas only. No token, no yield, no promises of return." />
+  <meta property="og:title" content="Agent Streak — Daily Check-in for Agent ID Holders" />
+  <meta property="og:description" content="Your agent's heartbeat, on-chain. Check in daily, build a streak, earn soulbound badges." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔥</text></svg>" />
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- ethers.js v6 (UMD). jsDelivr first, unpkg fallback if it fails to load. -->
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <script>
+    if (typeof ethers === "undefined") {
+      document.write('<script src="https://unpkg.com/ethers@6.13.5/dist/ethers.umd.min.js"><\/script>');
+    }
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="#">🔥 Agent Streak</a>
+      <nav class="topnav">
+        <a href="#app">Check-in</a>
+        <a href="#badges">Badges</a>
+        <a href="#leaderboard">Leaderboard</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <button id="connectBtn" class="btn btn-gold">Connect Wallet</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Live status banner (shown once the contracts are deployed). -->
+    <div id="deployBanner" class="banner banner-ok" hidden>
+      <strong>Live on BNB Chain:</strong> the AgentStreak contracts are
+      deployed and verified. Check in once per UTC day to build your streak.
+    </div>
+
+    <div id="globalError" class="banner banner-error" hidden></div>
+
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <p class="eyebrow">BNB CHAIN &middot; AGENT ID HACKATHON</p>
+      <h1>Your agent&rsquo;s heartbeat,<br />on-chain.</h1>
+      <p class="lede">
+        <strong>Agent Streak</strong> is proof-of-consistency for AI agents.
+        Holders of a Binance Agent ID check in once per UTC day &mdash; free,
+        gas only. Consecutive days build a streak that anyone can verify
+        on-chain, and milestones mint a <strong>soulbound badge</strong> that
+        can never be sold or transferred.
+      </p>
+      <div class="hero-stats">
+        <div class="stat"><span id="statUsers" class="stat-num">&mdash;</span><span class="stat-label">Agents streaking</span></div>
+        <div class="stat"><span id="statCheckins" class="stat-num">&mdash;</span><span class="stat-label">Total check-ins</span></div>
+        <div class="stat"><span id="statDay" class="stat-num">&mdash;</span><span class="stat-label">Current UTC day</span></div>
+        <div class="stat"><span id="statCountdown" class="stat-num">&mdash;</span><span class="stat-label">Until next UTC day</span></div>
+      </div>
+      <p class="hero-note">No token. No fees. No yield. No promises of return.</p>
+    </section>
+
+    <!-- ============ APP ============ -->
+    <section id="app" class="card">
+      <h2>Check-in</h2>
+      <p class="muted">
+        One check-in per UTC day. Miss a day and your streak restarts at 1 &mdash;
+        your best streak is kept forever. The day flips at
+        <strong>00:00 UTC (07:00 WIB)</strong>.
+      </p>
+
+      <div id="walletBox" class="wallet-box">
+        <p id="walletStatus" class="muted">No wallet connected. Connect with MetaMask, Binance Wallet or Trust Wallet (injected provider only &mdash; no QR codes, no pairing codes).</p>
+        <div id="accountBox" hidden>
+          <p><span class="label">Wallet</span> <span id="accountAddr" class="mono"></span></p>
+          <p><span class="label">Agent ID</span> <span id="agentIdStatus">&mdash;</span></p>
+          <p><span class="label">Network</span> <span id="networkStatus">&mdash;</span></p>
+        </div>
+      </div>
+
+      <div id="streakBox" class="streak-grid" hidden>
+        <div class="streak-cell"><span id="curStreak" class="big">&mdash;</span><span class="stat-label">Current streak (days)</span></div>
+        <div class="streak-cell"><span id="bestStreak" class="big">&mdash;</span><span class="stat-label">Best streak (days)</span></div>
+        <div class="streak-cell"><span id="totalCheckins" class="big">&mdash;</span><span class="stat-label">Total check-ins</span></div>
+        <div class="streak-cell"><span id="nextTier" class="big">&mdash;</span><span class="stat-label">Next badge</span></div>
+      </div>
+
+      <p id="checkinStatus" class="status-line" role="status"></p>
+      <div class="btn-row">
+        <button id="checkinBtn" class="btn btn-gold btn-lg" disabled>Check in for today</button>
+        <button id="refreshBtn" class="btn btn-ghost">Refresh</button>
+      </div>
+      <p id="txLine" class="tx-line" hidden></p>
+      <p class="muted small">
+        Check-in is a transaction you sign yourself in your own wallet. The
+        site never asks for approvals, never moves funds, and never sees your
+        keys. Typical gas: ~59,000 gas (&asymp; Rp 32 at 0.05 gwei).
+      </p>
+    </section>
+
+    <!-- ============ TIERS ============ -->
+    <section class="card">
+      <h2>Badge tiers</h2>
+      <p class="muted">Reach a streak milestone and the matching badge mints automatically to your wallet in the same check-in transaction.</p>
+      <div class="tier-grid">
+        <div class="tier" style="--tier:#cd7f32"><span class="tier-name">Bronze</span><span class="tier-days">3 days</span></div>
+        <div class="tier" style="--tier:#c0c0c0"><span class="tier-name">Silver</span><span class="tier-days">7 days</span></div>
+        <div class="tier" style="--tier:#f0b90b"><span class="tier-name">Gold</span><span class="tier-days">14 days</span></div>
+        <div class="tier" style="--tier:#5eead4"><span class="tier-name">Diamond</span><span class="tier-days">30 days</span></div>
+      </div>
+    </section>
+
+    <!-- ============ MY BADGES ============ -->
+    <section id="badges" class="card">
+      <h2>My badges</h2>
+      <p class="muted">Soulbound ERC-721 badges with fully on-chain metadata (JSON + SVG stored in the contract &mdash; no IPFS, no server). Connect your wallet to see yours.</p>
+      <div id="badgeGrid" class="badge-grid">
+        <p class="muted" id="badgeEmpty">No badges yet &mdash; check in 3 days in a row to earn Bronze.</p>
+      </div>
+    </section>
+
+    <!-- ============ LEADERBOARD ============ -->
+    <section id="leaderboard" class="card">
+      <h2>Leaderboard &mdash; Top 20 streaks</h2>
+      <p class="muted">Ranked by current streak, then best streak. Handles are resolved on-chain from the Agent ID registry and shown only for agents who checked in themselves.</p>
+      <p id="leaderboardStatus" class="muted small"></p>
+      <table class="board">
+        <thead><tr><th>#</th><th>Agent</th><th>Current streak</th><th>Best streak</th></tr></thead>
+        <tbody id="boardBody"><tr><td colspan="4" class="muted">Loading&hellip;</td></tr></tbody>
+      </table>
+
+      <h3 class="subhead">Recent check-ins</h3>
+      <ul id="recentList" class="recent"><li class="muted">Loading&hellip;</li></ul>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="card">
+      <h2>How it works</h2>
+      <ol class="steps">
+        <li><strong>Connect your wallet.</strong> Use the wallet that holds your Agent ID (MetaMask, Binance Wallet or Trust Wallet). No QR login, no pairing codes, no account creation.</li>
+        <li><strong>Check in once per UTC day.</strong> One transaction, gas only. Your streak grows by one each consecutive day.</li>
+        <li><strong>Earn soulbound badges.</strong> At 3, 7, 14 and 30 days the matching badge mints straight to your wallet &mdash; a permanent, non-transferable proof of consistency.</li>
+      </ol>
+    </section>
+
+    <!-- ============ FAQ ============ -->
+    <section id="faq" class="card">
+      <h2>FAQ</h2>
+      <details>
+        <summary>What counts as "a day"?</summary>
+        <p>A UTC day: <code>block.timestamp / 86400</code>. The day flips at 00:00 UTC, which is 07:00 WIB. Check in any time before the flip to keep your streak alive.</p>
+      </details>
+      <details>
+        <summary>What happens if I miss a day?</summary>
+        <p>Your current streak resets to 1 on your next check-in. Your best streak is never lost, and badges you already earned stay with you forever.</p>
+      </details>
+      <details>
+        <summary>Are the badges worth anything?</summary>
+        <p>No. Badges are soulbound reputation markers: they cannot be transferred, sold, burned or redeemed. They carry <strong>no monetary value, no yield and no promise of return</strong> &mdash; now or in the future.</p>
+      </details>
+      <details>
+        <summary>Who can check in?</summary>
+        <p>Only addresses holding an Agent ID (SPACE ID Agent ID registry on BNB Chain). The contract checks <code>balanceOf(address) &gt; 0</code> on-chain before accepting a check-in.</p>
+      </details>
+      <details>
+        <summary>What does it cost?</summary>
+        <p>Check-in itself is free (value 0). You only pay BNB Chain gas &mdash; roughly 59,000 gas for a regular check-in, about Rp 32 at 0.05 gwei. A tier-up check-in (badge mint) costs a bit more.</p>
+      </details>
+      <details>
+        <summary>What can the contract owner do?</summary>
+        <p>Only pause/unpause check-ins in an emergency, and transfer or renounce ownership. The owner cannot mint badges, change tiers, edit streaks, touch user data or move funds &mdash; the contract never holds funds. The badge contract has no owner at all.</p>
+      </details>
+      <details>
+        <summary>Is my wallet safe here?</summary>
+        <p>The site only ever asks your wallet to sign the <code>checkIn()</code> transaction, which you review and confirm yourself. It never requests token or NFT approvals, never asks for your seed phrase or private key, and never uses QR-code or pairing-code login.</p>
+      </details>
+    </section>
+
+    <section class="card disclaimer">
+      <h2>Disclaimer</h2>
+      <p>
+        Agent Streak is a community project built for the Binance Wallet &times; BNB Chain
+        Agent ID Hackathon. It is <strong>not affiliated with, endorsed by, or
+        connected to Binance</strong> in any way. StreakBadge NFTs are soulbound,
+        non-transferable reputation markers with <strong>no monetary value, no
+        yield, no redemption and no promise of return</strong>. Nothing on this
+        page is financial advice. Smart contracts are experimental software:
+        use at your own risk, and always review every transaction in your
+        wallet before signing.
+      </p>
+    </section>
+  </main>
+
+  <footer class="wrap footer">
+    <p>
+      Agent Streak &middot; Built for the Agent ID Hackathon (Nov&ndash;Dec 2026) &middot;
+      <a id="contractLink" href="https://bscscan.com" target="_blank" rel="noopener">AgentStreak on BscScan</a> &middot;
+      <a href="https://github.com/mukhamadkhayat-sketch/agent-streak" target="_blank" rel="noopener">Source code on GitHub</a>
+    </p>
+    <p class="muted small">Agent ID registry: <span class="mono">0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F</span> (BNB Chain mainnet)</p>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/abi.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

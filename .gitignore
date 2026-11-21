@@ -2,3 +2,6 @@ out/
 cache/
 broadcast/
 .env
+node_modules/
+tests-frontend/*.log
+tests-frontend/*.pid

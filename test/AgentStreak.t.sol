@@ -24,7 +24,7 @@ contract AgentStreakTest is Test {
         agentId = new MockAgentId();
         agentId.setHolder(alice, "alice");
         agentId.setHolder(bob, "bob");
-        streak = new AgentStreak(address(agentId));
+        streak = new AgentStreak(address(agentId), address(this));
         badge = streak.badge();
         // Fixed start: 2027-01-15 08:00:00 UTC (day 20833) for deterministic day math.
         vm.warp(1_800_000_000);

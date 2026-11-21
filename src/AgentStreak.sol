@@ -51,7 +51,13 @@ contract AgentStreak is Ownable, Pausable {
     error NotAgentIdHolder();
     error AlreadyCheckedIn();
 
-    constructor(address agentId_) Ownable(msg.sender) {
+    /// @param agentId_ Address of the Agent ID registry (HandleRegistry).
+    /// @param owner_  Owner of this contract (pause/unpause + ownership mgmt).
+    ///        Passed explicitly (not msg.sender) because the contract is
+    ///        deployed through a CREATE2 factory proxy: with a factory,
+    ///        msg.sender inside the constructor would be the factory itself,
+    ///        bricking owner functions. The deployer passes its own address.
+    constructor(address agentId_, address owner_) Ownable(owner_) {
         agentId = IAgentId(agentId_);
         badge = new StreakBadge(address(this));
     }

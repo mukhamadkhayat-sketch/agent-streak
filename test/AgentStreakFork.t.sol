@@ -21,7 +21,7 @@ contract AgentStreakForkTest is Test {
     function setUp() public {
         string memory rpc = vm.envOr("BSC_RPC_URL", string("https://bsc-dataseed.binance.org/"));
         vm.createSelectFork(rpc); // latest block (BSC public nodes prune history)
-        streak = new AgentStreak(AGENT_ID);
+        streak = new AgentStreak(AGENT_ID, address(this));
         badge = streak.badge();
     }
 

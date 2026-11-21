@@ -28,7 +28,22 @@ kept forever. A leaderboard ranks holders by streak.
 | `AgentStreak` | Check-in logic, streak accounting, tier thresholds, leaderboard views. Deploys `StreakBadge` in its constructor. |
 | `StreakBadge` | Soulbound ERC-721 badge. Mintable ONLY by `AgentStreak`. Fully on-chain JSON + SVG metadata. |
 
-Deployed addresses: *TBD (Phase 2 — not yet deployed).*
+## Live deployment (BNB Chain mainnet, 21 Nov 2026)
+
+| | |
+|---|---|
+| **AgentStreak** | [`0xf67d706d60092045d9f5ec1da83d7f2fcceec474`](https://bscscan.com/address/0xf67d706d60092045d9f5ec1da83d7f2fcceec474) |
+| **StreakBadge** | [`0xc428ec5de2350937754d585cea88807dd76fdff7`](https://bscscan.com/address/0xc428ec5de2350937754d585cea88807dd76fdff7) |
+| Deploy block | 134808165 |
+| Deploy tx | [`0x4df5e695ed1060b1d0abc7805362450c176c369725240a2aa447959db3901229`](https://bscscan.com/tx/0x4df5e695ed1060b1d0abc7805362450c176c369725240a2aa447959db3901229) |
+| Source verification | Sourcify `exact_match` (creation + runtime) for both contracts |
+| Frontend | https://mukhamadkhayat-sketch.github.io/agent-streak/ |
+
+Deployed via the Arachnid CREATE2 factory
+(`0x4e59b44847b379578588920cA78FbF26c0B4956C`) — the Binance Agentic Wallet
+cannot send contract-creation transactions directly, so the factory call
+carried the standard creation code. Verification is identical to a normal
+deploy.
 
 ## Owner permissions (disclosed, per hackathon rules)
 
